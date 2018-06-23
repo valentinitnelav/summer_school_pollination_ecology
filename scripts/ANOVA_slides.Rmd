@@ -1,0 +1,128 @@
+---
+title: "ANOVA with R"
+author: "Valentin Stefan"
+date: "Summer Schools on Pollination Ecology, 2018"
+output:
+  ioslides_presentation:
+    smaller: yes
+    widescreen: yes
+---
+
+## Goals for this lab
+
+- Understand why we use ANOVA to answer scientific questions
+- Learn how to use ANOVA in R
+
+
+## Motivation, PD & PL - 1
+
+In the field, you conducted **breeding system** and **pollen supplementation experiments**. 
+
+**Breeding system experiments: measure pollinator dependence (PD)**
+
+- quantify the reliance of a plant species on pollinators for reproduction
+
+**Supplementation experiments: measure pollen limitation (PL)**
+
+- quantify the magnitude by which plant reproduction is limited by pollen receipt from pollinators
+
+Use ANOVA to ask whether plants are **pollinator dependent** and/or **pollen limited** (compare *bagged*, *control* and *supplement* treatments).
+
+
+## Motivation, PD & PL - 2
+
+Situations you may encounter when measuring reproductive success:
+
+```{r, echo=FALSE, out.width="85%", fig.align='center'}
+library(data.table)
+
+generate_data <- function(n, mean_bag, mean_con, mean_sup, sd, title = ""){
+  set.seed(321)
+  dt <- data.table(bag = rnorm(n = n, mean = mean_bag, sd = sd),
+                   con = rnorm(n = n, mean = mean_con, sd = sd),
+                   sup = rnorm(n = n, mean = mean_sup, sd = sd))
+  dt2 <- melt(dt, measure.vars = 1:3)
+  dt2[, value := abs(value)]
+  boxplot(value ~ variable, 
+          data = dt2, 
+          outline = FALSE, 
+          main = title, 
+          cex.axis = 1.5)
+  stripchart(value ~ variable, data = dt2,
+             method = "jitter",
+             jitter = 0.1,
+             pch = 21,
+             col = rgb(1,0,0, alpha = 0.6),
+             cex = 1.5,
+             vertical = TRUE,
+             add = TRUE)
+}
+par(mfrow = c(1,3), mar = c(b=2,l=3,t=1,r=0))
+generate_data(n = 50, mean_bag = 0.1, mean_con = 0.5, mean_sup = 0.5, sd = 0.15)
+generate_data(n = 50, mean_bag = 0.5, mean_con = 0.5, mean_sup = 0.5, sd = 0.15)
+generate_data(n = 50, mean_bag = 0.1, mean_con = 0.35, mean_sup = 0.5, sd = 0.15)
+```
+
+## Motivation, PD & PL - 3
+
+**Pollinator dependence (PD)** & **pollen limitation (PL)** based on a reproductive success measure (e.g ratio between viable seeds and total number of ovules)
+
+|pollinator dependence (PD)|pollen limitation (PL)    |
+|--------------------------|--------------------------|
+|if bag < sup              |if con < sup              |
+
+`
+
+**Auto-fertility index (AFI)**
+
+- AFI is the ratio of average reproductive success in bagged vs. supplement. 
+- PD if AFI < 0.2
+
+**Magnitude (effect size) of PL (the log response ratio)**
+
+- `ES = ln(reproductive success in supplement treatment) - ln(reproductive success in control treatment)`
+- A low value (close to 0) indicates no PL
+
+
+## Motivation, PD & PL - 3
+
+|pollinator dependence (PD)|pollen limitation (PL)|
+|--------------------------|----------------------|
+|if bag < sup              |if con < sup          |
+
+```{r, echo=FALSE, out.width="75%", fig.align='center'}
+par(mfrow = c(1,3), mar = c(b=2,l=3,t=1,r=0))
+generate_data(n = 50, mean_bag = 0.1, mean_con = 0.5, mean_sup = 0.5, sd = 0.15, 
+              title = "PD & not PL")
+generate_data(n = 50, mean_bag = 0.5, mean_con = 0.5, mean_sup = 0.5, sd = 0.15,
+              title = "not PD, nor PL")
+generate_data(n = 50, mean_bag = 0.1, mean_con = 0.35, mean_sup = 0.5, sd = 0.15,
+              title = "PD & PL")
+```
+
+## ANalysis Of VAriance (ANOVA)
+
+How many means do you compare?
+
+- 2 means - **t-test**
+
+- more than 2 means - **ANOVA** (bag, cont, sup)
+
+Note - can also use ANOVA for two means. But it is standard practice to use t-test in such cases.
+
+ANOVA 
+
+- **Null Hypothesis (H0)**: no difference between the group means
+
+- **Alternative hypothesis (H1)**: means are different (do further tests to see which ones)
+
+Next - an example with R.
+
+## Outline of the exercise
+
+- Read data
+- Check assumptions (because ANOVA is a "parametric" test)
+  - normality
+  - homogeneity of variance
+- ANOVA summary: are there differences or not?
+- "post hoc" tests: where are the differences?
